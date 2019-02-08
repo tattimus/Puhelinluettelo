@@ -1,0 +1,27 @@
+{
+  "name": "puhelinluettelo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "nodemon index.js",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tattimus/Puhelinluettelo.git"
+  },
+  "author": "Samu Tatti",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tattimus/Puhelinluettelo/issues"
+  },
+  "homepage": "https://github.com/tattimus/Puhelinluettelo#readme",
+  "dependencies": {
+    "express": "^4.16.4"
+  },
+  "devDependencies": {
+    "nodemon": "^1.18.9"
+  }
+}
