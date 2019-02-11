@@ -1,39 +1,25 @@
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config()
+}
 const express = require('express')
 const morgan = require('morgan')
 const app = express()
 const bodyParser = require('body-parser')
 const cors = require('cors')
+const Person = require('./models/person')
 
 app.use(morgan('tiny'))
 app.use(bodyParser.json())
 app.use(cors())
 app.use(express.static('build'))
 
-let persons = [
-    {
-        id: 1,
-        name: "Arto Hellas",
-        number: "045-1236543"
-    },
-    {
-        id: 2,
-        name: "Arto Järvinen",
-        number: "041-21423123"
-    },
-    {
-        id: 3,
-        name: "Lea Kutvonen",
-        number: "040-4323234"
-    },
-    {
-        id: 4,
-        name: "Martti Tienari",
-        number: "09-784232"
-    }
-]
+let persons = []
 
 app.get('/api/persons', (req, res) => {
-    res.json(persons)
+    Person.find({}).then(pers => {
+        persons = pers
+        res.json(pers.map(per => per.toJSON()))
+    })
 })
 
 app.get('/info', (req, res) => {
@@ -43,43 +29,60 @@ app.get('/info', (req, res) => {
     </div>`)
 })
 
-app.get('/api/persons/:id', (req, res) => {
-    const id = Number(req.params.id)
-    const per = persons.find(pers => pers.id === id)
-    res.json(per)
+app.get('/api/persons/:id', (req, res, next) => {
+    Person.findById(req.params.id).then(per => {
+        res.json(per.toJSON())
+    })
+        .catch(error => next(error))
 })
 
-app.delete('/api/persons/:id', (req, res) => {
-    const id = Number(req.params.id)
-    persons = persons.filter(per => per.id !== id)
-    res.status(204).end()
+app.delete('/api/persons/:id', (req, res, next) => {
+    Person.findByIdAndRemove(req.params.id).then(result => {
+        res.status(204).end()
+    })
+        .catch(error => next(error))
 })
 
-app.post('/api/persons', (req, res) => {
+app.put('/api/persons/:id', (req, res, next) => {
     const body = req.body
-    if (body.name === undefined) {
-        return res.status(400).json({
-            error: 'name missing'
-        })
-    }
-
-    if (persons.map(per => per.name).includes(body.name)) {
-        return res.status(400).json( {
-            error: 'name already exists'
-        })
-    }
 
     const per = {
         name: body.name,
-        number: body.number,
-        id: Math.floor(Math.random() * Math.floor(10000))
+        number: body.number
     }
 
-    persons = persons.concat(per)
-    res.json(per)
+    Person.findByIdAndUpdate(req.params.id, per, { new: true }).then(updatedPer => {
+        res.json(updatedPer.toJSON())
+    })
+        .catch(error => next(error))
 })
 
-const PORT = process.env.PORT || 3001
+app.post('/api/persons', (req, res, next) => {
+    const body = req.body
+    const per = new Person({
+        name: body.name,
+        number: body.number
+    })
+
+    per.save().then(savedPer => {
+        res.json(savedPer.toJSON())
+    })
+        .catch(error => next(error))
+})
+
+const errorHandler = (error, req, res, next) => {
+    console.error(error.message)
+    if (error.name === 'CastError' && error.kind == 'ObjectId') {
+        return res.status(400).send({ error: 'vääränlainen id' })
+    } else if (error.name === 'ValidationError') {
+        return res.status(400).send({ error: 'Annettu nimi ei kelpaa tai se on jo käytössä' })
+    }
+    next(error)
+}
+
+app.use(errorHandler)
+
+const PORT = process.env.PORT
 app.listen(PORT, () => {
     console.log(`Server runnings on port ${PORT}`)
 })
